@@ -1,1 +1,0 @@
-# 4GLTE_SignalStrength
