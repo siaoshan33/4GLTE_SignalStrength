@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoLte;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.TextView;
@@ -27,7 +29,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_GPS_SETTING_RETURN = 2;
 
     private TextView tvDbmInfo;
-    int dbm = -1;
+    public int dbm = -1;
+    TelephonyManager mTelephonyManager;
+
+    MyPhoneStateListener psListener; //
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,7 +42,9 @@ public class MainActivity extends AppCompatActivity {
         this.setContentView(R.layout.activity_main);
         tvDbmInfo = (TextView) findViewById(R.id.ss);
 
-        getCellInfo();
+        psListener = new MyPhoneStateListener(); //
+        mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        mTelephonyManager.listen(psListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);;
     }
 
     private void checkPermission() {
@@ -65,25 +72,29 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    private void getCellInfo() {
-        checkPermission();
+    public class MyPhoneStateListener extends PhoneStateListener {
+        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+            checkPermission();
 
-        if (isGpsEnabled()) {
-            TelephonyManager mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-            List<CellInfo> cellInfoList = mTelephonyManager.getAllCellInfo();
-            Log.d(TAG, "cellInfoList.size = " + cellInfoList.size());
-            for (CellInfo cellInfo : cellInfoList) {
-                Log.d(TAG, "cellInfo = " + cellInfo.toString());
-                if (cellInfo instanceof CellInfoLte) {
-                    Log.d(TAG, "cellInfo(LTE) = " + cellInfo.toString());
-                    // cast to CellInfoLte and call all the CellInfoLte methods you need
-                    dbm = ((CellInfoLte) cellInfo).getCellSignalStrength().getDbm();
-                    tvDbmInfo.setText(String.valueOf(dbm));
+            if (isGpsEnabled()) {
+                List<CellInfo> cellInfoList = mTelephonyManager.getAllCellInfo();
+                Log.d(TAG, "cellInfoList.size = " + cellInfoList.size());
+                for (CellInfo cellInfo : cellInfoList) {
+                    Log.d(TAG, "cellInfo = " + cellInfo.toString());
+                    if (cellInfo instanceof CellInfoLte) {
+                        Log.d(TAG, "cellInfo(LTE) = " + cellInfo.toString());
+                        // cast to CellInfoLte and call all the CellInfoLte methods you need
+                        dbm = ((CellInfoLte) cellInfo).getCellSignalStrength().getDbm();
+                        tvDbmInfo.setText(String.valueOf(dbm));
+                        super.onSignalStrengthsChanged(signalStrength);
+
+                    }
                 }
             }
-        }
 
+        }
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -92,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == 0) {
             switch (requestCode) {
                 case MY_PERMISSIONS_GPS_SETTING_RETURN:
-                    getCellInfo();
+                    psListener = new MyPhoneStateListener();
                     break;
             }
         } else if (resultCode == 1) {
@@ -103,4 +114,5 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
 }
