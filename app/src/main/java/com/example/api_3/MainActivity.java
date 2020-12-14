@@ -13,6 +13,7 @@ import android.telephony.CellInfoLte;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,10 +30,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_GPS_SETTING_RETURN = 2;
 
     private TextView tvDbmInfo;
-    public int dbm = -1;
-    TelephonyManager mTelephonyManager;
+    private TextView tvMcc;
+    private TextView tvMnc;
 
-    MyPhoneStateListener psListener; //
+    TelephonyManager mTelephonyManager;
+    MyPhoneStateListener psListener;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -40,9 +42,11 @@ public class MainActivity extends AppCompatActivity {
 
         //setup content stuff
         this.setContentView(R.layout.activity_main);
-        tvDbmInfo = (TextView) findViewById(R.id.ss);
+        tvDbmInfo = (TextView) findViewById(R.id.signalstrength);
+        tvMcc = (TextView) findViewById(R.id.mcc);
+        tvMnc = (TextView) findViewById(R.id.mnc);
 
-        psListener = new MyPhoneStateListener(); //
+        psListener = new MyPhoneStateListener();
         mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         mTelephonyManager.listen(psListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);;
     }
@@ -73,11 +77,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class MyPhoneStateListener extends PhoneStateListener {
+        int dbm;
+        String imei;
+        String mcc;
+        String mnc;
+
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
             checkPermission();
 
             if (isGpsEnabled()) {
                 List<CellInfo> cellInfoList = mTelephonyManager.getAllCellInfo();
+                imei = mTelephonyManager.getNetworkOperator();
+
                 Log.d(TAG, "cellInfoList.size = " + cellInfoList.size());
                 for (CellInfo cellInfo : cellInfoList) {
                     Log.d(TAG, "cellInfo = " + cellInfo.toString());
@@ -86,15 +97,21 @@ public class MainActivity extends AppCompatActivity {
                         // cast to CellInfoLte and call all the CellInfoLte methods you need
                         dbm = ((CellInfoLte) cellInfo).getCellSignalStrength().getDbm();
                         tvDbmInfo.setText(String.valueOf(dbm));
-                        super.onSignalStrengthsChanged(signalStrength);
 
+                        // imei = mcc(3-bit) + mnc(2-bit)
+                        if (!TextUtils.isEmpty(imei)) {
+                            mcc = imei.substring(0, 3);
+                            mnc = imei.substring(3, 5);
+                        }
+                        tvMcc.setText(String.valueOf(mcc));
+                        tvMnc.setText(String.valueOf(mnc));
+
+                        super.onSignalStrengthsChanged(signalStrength);
                     }
                 }
             }
-
         }
     }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
